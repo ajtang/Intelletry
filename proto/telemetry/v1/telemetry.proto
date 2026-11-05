@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package telemetry.v1;
+
+option go_package = "github.com/intelletry/ev-telemetry/gen/telemetry/v1;telemetryv1";
+
+enum ChargingState {
+  CHARGING_STATE_UNSPECIFIED = 0;
+  CHARGING_STATE_NONE = 1;
+  CHARGING_STATE_AC = 2;
+  CHARGING_STATE_DC = 3;
+}
+
+enum ConnectivityState {
+  CONNECTIVITY_STATE_UNSPECIFIED = 0;
+  CONNECTIVITY_STATE_ONLINE = 1;
+  CONNECTIVITY_STATE_DEGRADED = 2;
+  CONNECTIVITY_STATE_OFFLINE = 3;
+}
+
+// TelemetryEvent is one vehicle sample. It is the canonical wire format for
+// gRPC, for POST /telemetry (protojson), and for the Redis stream payload.
+//
+// Energy and distance are cumulative counters rather than instantaneous rates.
+// Counters survive dropped samples: consumption over any window is a subtraction,
+// so connectivity loss does not corrupt efficiency calculations.
+message TelemetryEvent {
+  string event_id = 1;
+  string vehicle_id = 2;
+  // Monotonic per vehicle. Used for de-duplication and for detecting lost samples.
+  uint64 seq = 3;
+  int64 timestamp_ms = 4;
+
+  string vin = 5;
+  string model = 6;
+  double pack_capacity_kwh = 7;
+  string software_version = 8;
+  string region = 9;
+
+  double soc_pct = 10;
+  double battery_temp_c = 11;
+  double motor_temp_c = 12;
+  double coolant_temp_c = 13;
+  double ambient_temp_c = 14;
+  double cooling_demand_pct = 15;
+
+  double speed_kph = 16;
+  double latitude = 17;
+  double longitude = 18;
+  double heading_deg = 19;
+  double odometer_km = 20;
+
+  ChargingState charging_state = 21;
+  double charge_power_kw = 22;
+  // Positive when the pack discharges, negative when it charges.
+  double pack_power_kw = 23;
+  double energy_consumed_kwh = 24;
+  double energy_charged_kwh = 25;
+
+  ConnectivityState connectivity = 26;
+  double signal_dbm = 27;
+}
+
+message TelemetryBatch {
+  repeated TelemetryEvent events = 1;
+}
+
+message Rejection {
+  uint32 index = 1;
+  string reason = 2;
+}
+
+message IngestResponse {
+  uint32 accepted = 1;
+  repeated Rejection rejected = 2;
+}
+
+service TelemetryService {
+  // Returns only after accepted events are durable in Redis.
+  rpc IngestBatch(TelemetryBatch) returns (IngestResponse);
+  // Long-lived vehicle gateway connection, with one acknowledgement per batch.
+  rpc StreamTelemetry(stream TelemetryBatch) returns (stream IngestResponse);
+}
