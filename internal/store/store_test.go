@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/intelletry/ev-telemetry/internal/diag"
+	"github.com/ajtang/Intelletry/internal/diag"
 )
 
 // openTest connects to a disposable database named by TEST_DATABASE_URL. The test

@@ -16,9 +16,9 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
 
-	telemetryv1 "github.com/intelletry/ev-telemetry/gen/telemetry/v1"
-	"github.com/intelletry/ev-telemetry/internal/platform"
-	"github.com/intelletry/ev-telemetry/internal/stream"
+	telemetryv1 "github.com/ajtang/Intelletry/gen/telemetry/v1"
+	"github.com/ajtang/Intelletry/internal/platform"
+	"github.com/ajtang/Intelletry/internal/stream"
 )
 
 func main() {

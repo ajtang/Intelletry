@@ -14,8 +14,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 
-	telemetryv1 "github.com/intelletry/ev-telemetry/gen/telemetry/v1"
-	"github.com/intelletry/ev-telemetry/internal/telemetry"
+	telemetryv1 "github.com/ajtang/Intelletry/gen/telemetry/v1"
+	"github.com/ajtang/Intelletry/internal/telemetry"
 )
 
 // ErrRateLimited means the credential is over its allowance.

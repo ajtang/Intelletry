@@ -9,8 +9,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	telemetryv1 "github.com/intelletry/ev-telemetry/gen/telemetry/v1"
-	"github.com/intelletry/ev-telemetry/internal/stream"
+	telemetryv1 "github.com/ajtang/Intelletry/gen/telemetry/v1"
+	"github.com/ajtang/Intelletry/internal/stream"
 )
 
 var (

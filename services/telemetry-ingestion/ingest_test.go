@@ -14,8 +14,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
 
-	telemetryv1 "github.com/intelletry/ev-telemetry/gen/telemetry/v1"
-	"github.com/intelletry/ev-telemetry/internal/stream"
+	telemetryv1 "github.com/ajtang/Intelletry/gen/telemetry/v1"
+	"github.com/ajtang/Intelletry/internal/stream"
 )
 
 type fakePublisher struct {

@@ -19,7 +19,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	telemetryv1 "github.com/intelletry/ev-telemetry/gen/telemetry/v1"
+	telemetryv1 "github.com/ajtang/Intelletry/gen/telemetry/v1"
 )
 
 const maxBodyBytes = 8 << 20

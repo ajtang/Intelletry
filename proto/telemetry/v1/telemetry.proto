@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package telemetry.v1;
 
-option go_package = "github.com/intelletry/ev-telemetry/gen/telemetry/v1;telemetryv1";
+option go_package = "github.com/ajtang/Intelletry/gen/telemetry/v1;telemetryv1";
 
 enum ChargingState {
   CHARGING_STATE_UNSPECIFIED = 0;

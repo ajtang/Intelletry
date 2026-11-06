@@ -592,7 +592,7 @@ const file_telemetry_v1_telemetry_proto_rawDesc = "" +
 	"\x1aCONNECTIVITY_STATE_OFFLINE\x10\x032\xb0\x01\n" +
 	"\x10TelemetryService\x12I\n" +
 	"\vIngestBatch\x12\x1c.telemetry.v1.TelemetryBatch\x1a\x1c.telemetry.v1.IngestResponse\x12Q\n" +
-	"\x0fStreamTelemetry\x12\x1c.telemetry.v1.TelemetryBatch\x1a\x1c.telemetry.v1.IngestResponse(\x010\x01BAZ?github.com/intelletry/ev-telemetry/gen/telemetry/v1;telemetryv1b\x06proto3"
+	"\x0fStreamTelemetry\x12\x1c.telemetry.v1.TelemetryBatch\x1a\x1c.telemetry.v1.IngestResponse(\x010\x01B;Z9github.com/ajtang/Intelletry/gen/telemetry/v1;telemetryv1b\x06proto3"
 
 var (
 	file_telemetry_v1_telemetry_proto_rawDescOnce sync.Once

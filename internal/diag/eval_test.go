@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/intelletry/ev-telemetry/internal/diag"
-	"github.com/intelletry/ev-telemetry/internal/sim"
+	"github.com/ajtang/Intelletry/internal/diag"
+	"github.com/ajtang/Intelletry/internal/sim"
 )
 
 var expected = map[sim.Fault]diag.Category{
@@ -31,7 +31,7 @@ type replayResult struct {
 
 // replay runs the fleet through the real analyzer, rebuilding fleet statistics on a
 // rolling window as the runtime does.
-func replay(t testing.TB, vehicles int, seed int64, duration time.Duration) replayResult {
+func replay(t testing.TB, vehicles int, seed int64, duration, step time.Duration) replayResult {
 	t.Helper()
 	start := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
 	fleet := sim.NewFleet(sim.FleetConfig{
@@ -63,7 +63,6 @@ func replay(t testing.TB, vehicles int, seed int64, duration time.Duration) repl
 	}
 
 	var snap *diag.Snapshot
-	step := time.Minute
 	ticks := int(duration / step)
 	for tick := 1; tick <= ticks; tick++ {
 		now := start.Add(time.Duration(tick) * step)
@@ -92,7 +91,7 @@ func replay(t testing.TB, vehicles int, seed int64, duration time.Duration) repl
 				}
 			}
 		}
-		if tick%60 == 0 {
+		if tick%int(time.Hour/step) == 0 {
 			epochs = append(epochs, current)
 			if len(epochs) > windows {
 				epochs = epochs[1:]
@@ -117,7 +116,7 @@ func TestDiagnosticAccuracy(t *testing.T) {
 	}
 	for _, seed := range []int64{7, 42} {
 		t.Run(fmt.Sprintf("seed=%d", seed), func(t *testing.T) {
-			r := replay(t, 280, seed, 72*time.Hour)
+			r := replay(t, 280, seed, 72*time.Hour, time.Minute)
 
 			total := map[sim.Fault]int{}
 			hits := map[sim.Fault]int{}
@@ -214,5 +213,45 @@ func TestDiagnosticAccuracy(t *testing.T) {
 				t.Errorf("software regression in %s not detected at fleet level", sim.RegressedVersion)
 			}
 		})
+	}
+}
+
+// TestAccuracyAtLiveSampleRate guards against detections that only work at the replay's
+// sample rate, since the live simulator reports every two vehicle minutes.
+func TestAccuracyAtLiveSampleRate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("fleet replay")
+	}
+	for _, hours := range []time.Duration{10, 72} {
+		r := replay(t, 280, 7, hours*time.Hour, 2*time.Minute)
+		hits, total, wrong := map[sim.Fault]int{}, map[sim.Fault]int{}, 0
+		for _, v := range r.vehicles {
+			got := r.opened[v.ID]
+			if v.Fault != sim.FaultNone {
+				total[v.Fault]++
+				if _, ok := got[expected[v.Fault]]; ok {
+					hits[v.Fault]++
+				}
+			}
+			for c := range got {
+				if v.Fault == sim.FaultNone || expected[v.Fault] != c {
+					wrong++
+				}
+			}
+		}
+		t.Logf("%2dh at 2-minute samples: hits=%v total=%v wrong=%d", hours, hits, total, wrong)
+		if hours == 72 {
+			for f, n := range total {
+				if f == sim.FaultCoolingDegradation {
+					continue // cold-climate vehicles can be unobservable, see TestDiagnosticAccuracy
+				}
+				if float64(hits[f])/float64(n) < 0.75 {
+					t.Errorf("%s recall %d/%d below 0.75 at the live sample rate", f, hits[f], n)
+				}
+			}
+		}
+		if wrong > 0 {
+			t.Errorf("%d incorrect diagnoses at %dh", wrong, hours)
+		}
 	}
 }

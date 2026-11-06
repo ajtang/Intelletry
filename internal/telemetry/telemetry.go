@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	telemetryv1 "github.com/intelletry/ev-telemetry/gen/telemetry/v1"
+	telemetryv1 "github.com/ajtang/Intelletry/gen/telemetry/v1"
 )
 
 const (
@@ -110,4 +110,16 @@ type LiveState struct {
 	BatteryResidual  float64 `json:"battery_residual"`
 	WhPerKm          float64 `json:"wh_per_km"`
 	RiseRate         float64 `json:"rise_rate_c_min"`
+}
+
+// TimelineSample is a compact point in a vehicle's recent history. It is deliberately
+// smaller than LiveState because Redis holds one list per vehicle.
+type TimelineSample struct {
+	T       int64   `json:"t"`
+	Battery float64 `json:"b"`
+	Motor   float64 `json:"m"`
+	Ambient float64 `json:"a"`
+	SoC     float64 `json:"s"`
+	Speed   float64 `json:"v"`
+	Power   float64 `json:"p"`
 }

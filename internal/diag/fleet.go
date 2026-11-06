@@ -243,7 +243,7 @@ func FindRegressions(hists map[string]Histogram) []VersionFinding {
 }
 
 // RegressionDiagnosis turns version findings into a fleet-level diagnosis.
-func RegressionDiagnosis(version string, findings []VersionFinding, affected int) Diagnosis {
+func RegressionDiagnosis(version string, findings []VersionFinding) Diagnosis {
 	ev := make([]Evidence, 0, len(findings))
 	top := findings[0]
 	for _, f := range findings {

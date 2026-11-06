@@ -21,9 +21,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 
-	telemetryv1 "github.com/intelletry/ev-telemetry/gen/telemetry/v1"
-	"github.com/intelletry/ev-telemetry/internal/platform"
-	"github.com/intelletry/ev-telemetry/internal/sim"
+	telemetryv1 "github.com/ajtang/Intelletry/gen/telemetry/v1"
+	"github.com/ajtang/Intelletry/internal/platform"
+	"github.com/ajtang/Intelletry/internal/sim"
 )
 
 type sender interface {
