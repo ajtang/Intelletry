@@ -21,6 +21,14 @@ scripts/local.sh down       # stop everything and delete local data
 scripts/local.sh test
 ```
 
+## Benchmark ingestion
+
+```bash
+scripts/bench.sh
+```
+
+Ingestion sustained 500,000 events/s under 20 ms p99 with no lost events on one laptop. See [the results and their limits](docs/benchmarks.md).
+
 ## Dashboard access
 
 The dashboard has no sign-in yet. The operator name on alert actions is typed in by the user and is not verified, so a real deployment needs Microsoft Entra ID or similar in front of it.
