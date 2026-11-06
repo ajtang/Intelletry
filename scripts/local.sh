@@ -3,6 +3,7 @@
 # Postgres instances kept in .run/. Requires: brew install go redis postgresql@16
 #
 #   scripts/local.sh up [vehicles]     start everything (default 200 vehicles)
+#   scripts/local.sh dashboard         run the dashboard in the foreground (needs Node 22+)
 #   scripts/local.sh down              stop everything and delete .run/
 #   scripts/local.sh status            show what is running
 #   scripts/local.sh test              run all tests against throwaway databases
@@ -53,6 +54,11 @@ case "${1:-}" in
     start vehicle-simulator HTTP_PORT=8081 INGEST_API_KEY="$INGEST_KEY" SIM_VEHICLES="$VEHICLES" SIM_TIME_SCALE="${SIM_TIME_SCALE:-60}" SIM_FAULT_RATE="${SIM_FAULT_RATE:-0.15}"
     echo "Backend running with $VEHICLES vehicles. API: http://localhost:8090 (token: $API_TOKEN). Logs: .run/logs"
     ;;
+  dashboard)
+    cd "$ROOT/services/fleet-dashboard"
+    [ -d node_modules ] || npm ci
+    API_URL="http://localhost:8090" API_TOKEN="$API_TOKEN" exec npm run dev
+    ;;
   down)
     for f in "$RUN"/pids/*.pid; do [ -e "$f" ] && kill "$(cat "$f")" 2>/dev/null || true; done
     sleep 2
@@ -73,7 +79,10 @@ case "${1:-}" in
     # -p 1 because these packages reset the same throwaway database.
     cd "$ROOT" && TEST_DATABASE_URL="postgres://dev@127.0.0.1:$PG_PORT/evtest?sslmode=disable" TEST_REDIS_URL="redis://127.0.0.1:$REDIS_PORT/1" \
       go test -race -count=1 -p 1 ./...
+    cd "$ROOT/services/fleet-dashboard"
+    [ -d node_modules ] || npm ci
+    npm run lint && npm run typecheck && npm test
     ;;
   *)
-    sed -n '2,8p' "$0"; exit 1 ;;
+    sed -n '2,9p' "$0"; exit 1 ;;
 esac

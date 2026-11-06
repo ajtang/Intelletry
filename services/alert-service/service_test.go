@@ -258,3 +258,30 @@ func itoa(v int64) string {
 	raw, _ := json.Marshal(v)
 	return string(raw)
 }
+
+// Hub.Run blocking after cancellation would leave the process hanging on shutdown, with
+// its listener closed but never exiting.
+func TestHubStopsWhenContextIsCancelled(t *testing.T) {
+	redisURL := os.Getenv("TEST_REDIS_URL")
+	if redisURL == "" {
+		t.Skip("TEST_REDIS_URL not set")
+	}
+	rdb, err := stream.NewClient(redisURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rdb.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		NewHub(nil).Run(ctx, rdb)
+		close(done)
+	}()
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Hub.Run did not return after cancellation")
+	}
+}

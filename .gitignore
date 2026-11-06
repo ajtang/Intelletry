@@ -9,3 +9,4 @@ tsconfig.tsbuildinfo
 next-env.d.ts
 .run/
 .DS_Store
+.claude/

@@ -31,9 +31,13 @@ func NewHub(g prometheus.Gauge) *Hub { return &Hub{clients: map[chan []byte]stru
 func (h *Hub) Run(ctx context.Context, rdb *redis.Client) {
 	for ctx.Err() == nil {
 		sub := rdb.Subscribe(ctx, stream.OpsChannel)
+		// The channel only closes when the subscription does, so without this the loop
+		// would outlive ctx and block process shutdown forever.
+		stop := context.AfterFunc(ctx, func() { _ = sub.Close() })
 		for msg := range sub.Channel() {
 			h.broadcast([]byte(msg.Payload))
 		}
+		stop()
 		_ = sub.Close()
 		select {
 		case <-ctx.Done():
