@@ -2,7 +2,7 @@
 
 A connected-vehicle telemetry platform that explains why a vehicle is behaving abnormally, not just what its sensors read.
 
-**Status:** in progress. The backend pipeline and fleet dashboard are built. The 3D digital twin and deployment setup are still to come.
+**Status:** in progress. The backend pipeline, fleet dashboard and 3D digital twin are built. The deployment setup is still to come.
 
 ## Run it locally
 

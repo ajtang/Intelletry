@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { use, useCallback, useMemo, useState } from "react";
 import { AlertCard } from "@/components/AlertCard";
@@ -7,7 +8,15 @@ import { TimeChart } from "@/components/charts";
 import { ErrorBanner, LevelBadge, Panel, Segmented, State, StreamBadge, Tile } from "@/components/ui";
 import { ago, dateTime, humanize, modeLabel, num } from "@/lib/format";
 import { useEventStream, useNow, usePoll } from "@/lib/hooks";
-import type { Diagnostic, Level, LiveState, TimelineSample, VehicleDetail } from "@/lib/types";
+import type { Alert, Diagnostic, Level, LiveState, OpsEvent, TimelineSample, VehicleDetail } from "@/lib/types";
+
+// WebGL only works in the browser, and Three.js is large enough to load only on this page.
+const DigitalTwin = dynamic(() => import("@/components/DigitalTwin"), {
+  ssr: false,
+  loading: () => <p className="empty">Loading 3D model…</p>,
+});
+
+const NO_ALERTS: Alert[] = [];
 
 const RANGES = [
   { value: "10", label: "10 min" },
@@ -93,11 +102,22 @@ export default function VehiclePage({ params }: { params: Promise<{ id: string }
   const status = useEventStream<LiveState>(`/vehicles/${encoded}/stream`, onMessage);
   const now = useNow();
 
+  // Alerts and diagnostics reach the model as soon as they happen, not at the next poll.
+  const refreshDetail = detail.refresh;
+  const onOpsEvent = useCallback(
+    (ev: OpsEvent) => {
+      if (ev.alert?.subject === id || ev.diagnostic?.subject === id) refreshDetail();
+    },
+    [id, refreshDetail],
+  );
+  useEventStream<OpsEvent>("/events", onOpsEvent);
+
   const d = detail.data;
   const streamed = stream.id === id ? stream : null;
   const polled = d?.live ?? null;
   const live = streamed?.live && (!polled || streamed.live.timestamp_ms >= polled.timestamp_ms) ? streamed.live : polled;
-  const online = polled?.online ?? false;
+  // A stream sample can arrive before the first poll, and it proves the vehicle is reporting.
+  const online = polled ? (polled.online ?? false) : true;
 
   const end = now || live?.timestamp_ms || 0;
   const from = end - minutes * 60000;
@@ -144,9 +164,13 @@ export default function VehiclePage({ params }: { params: Promise<{ id: string }
           <Tile label="Motor temperature" value={<>{num(live?.motor_temp_c, 1)}<small> °C</small></>} sub={`Cooling demand ${num(live?.cooling_demand_pct)} %`} />
           <Tile label="Speed" value={<>{num(live?.speed_kph)}<small> km/h</small></>} sub={`Odometer ${num(live?.odometer_km)} km`} />
           <Tile label="Pack power" value={<>{num(live?.pack_power_kw, 1)}<small> kW</small></>} sub={`${num(live?.wh_per_km)} Wh/km`} />
-          <Tile label="Connectivity" value={live ? humanize(live.connectivity.toLowerCase()) : "–"} sub={`Signal ${num(live?.signal_dbm)} dBm`} />
+          <Tile label="Connectivity" value={!live ? "–" : online ? humanize(live.connectivity.toLowerCase()) : "No reports"} sub={`${online ? "Signal" : "Last signal"} ${num(live?.signal_dbm)} dBm`} />
           <Tile label="Battery deviation from fleet" value={<>{num(live?.deviation_score)}<small> / 100</small></>} sub={`Battery residual ${num(live?.battery_residual, 1)} °C`} />
         </div>
+
+        <Panel title="Digital twin" note="Follows live telemetry and open diagnoses">
+          {live ? <DigitalTwin live={live} alerts={d?.active_alerts ?? NO_ALERTS} online={online} /> : <p className="empty">Waiting for telemetry…</p>}
+        </Panel>
 
         <div className="grid main-side">
           <div className="stack">
