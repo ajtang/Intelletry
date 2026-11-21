@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: intelletry
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: intelletry
+resources:
+  - namespace.yaml
+  - service-account.yaml
+  - secret-provider.yaml
+  - network-policies.yaml
+  - pod-monitor.yaml
+  - telemetry-ingestion
+  - anomaly-engine
+  - alert-service
+  - fleet-dashboard
+configMapGenerator:
+  # Settings every pipeline service must agree on. The hash suffix rolls the pods when
+  # they change.
+  - name: pipeline-config
+    literals:
+      - STREAM_SHARDS=16
+      - TELEMETRY_TIME_SCALE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability:4318
+      - TRACE_SAMPLE_RATIO=0.05

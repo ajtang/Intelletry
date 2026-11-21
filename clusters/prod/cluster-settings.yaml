@@ -1,0 +1,15 @@
+# Values that differ per cluster. Flux substitutes them from the Bicep deployment's
+# outputs, and the platform and apps Kustomizations read them from here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-settings
+  namespace: flux-system
+data:
+  ACR_LOGIN_SERVER: ${ACR_LOGIN_SERVER}
+  KEYVAULT_NAME: ${KEYVAULT_NAME}
+  TENANT_ID: ${TENANT_ID}
+  WORKLOAD_CLIENT_ID: ${WORKLOAD_CLIENT_ID}
+  DASHBOARD_HOST: ${DASHBOARD_HOST}
+  INGEST_HOST: ${INGEST_HOST}
+  TLS_CERT_KEYVAULT_URI: ${TLS_CERT_KEYVAULT_URI}

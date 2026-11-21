@@ -1,0 +1,7 @@
+# Cluster add-ons the applications depend on. Ingress, Key Vault secrets, Prometheus
+# scraping and Container Insights are AKS add-ons enabled in infrastructure/aks.bicep, so
+# only what AKS does not provide lives here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - observability

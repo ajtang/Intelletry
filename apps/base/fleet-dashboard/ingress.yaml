@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fleet-dashboard
+  annotations:
+    # The dashboard keeps server-sent event streams open, so the proxy must neither
+    # buffer them nor time them out.
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    kubernetes.azure.com/tls-cert-keyvault-uri: ${TLS_CERT_KEYVAULT_URI}
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  tls:
+    - hosts:
+        - "${DASHBOARD_HOST}"
+      secretName: keyvault-fleet-dashboard
+  rules:
+    - host: ${DASHBOARD_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fleet-dashboard
+                port:
+                  name: http

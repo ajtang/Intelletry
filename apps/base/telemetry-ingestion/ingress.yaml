@@ -1,0 +1,55 @@
+# Vehicles stream over gRPC, which needs HTTP/2 end to end, so it has its own Ingress with
+# the GRPC backend protocol. JSON ingestion shares the host on its own path.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: telemetry-ingestion-grpc
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: GRPC
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    # Long-lived StreamTelemetry calls must not be cut off by the proxy.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    kubernetes.azure.com/tls-cert-keyvault-uri: ${TLS_CERT_KEYVAULT_URI}
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  tls:
+    - hosts:
+        - "${INGEST_HOST}"
+      secretName: keyvault-telemetry-ingestion-grpc
+  rules:
+    - host: ${INGEST_HOST}
+      http:
+        paths:
+          - path: /telemetry.v1.TelemetryService
+            pathType: Prefix
+            backend:
+              service:
+                name: telemetry-ingestion
+                port:
+                  name: grpc
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: telemetry-ingestion-http
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    kubernetes.azure.com/tls-cert-keyvault-uri: ${TLS_CERT_KEYVAULT_URI}
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  tls:
+    - hosts:
+        - "${INGEST_HOST}"
+      secretName: keyvault-telemetry-ingestion-http
+  rules:
+    - host: ${INGEST_HOST}
+      http:
+        paths:
+          - path: /telemetry
+            pathType: Exact
+            backend:
+              service:
+                name: telemetry-ingestion
+                port:
+                  name: http

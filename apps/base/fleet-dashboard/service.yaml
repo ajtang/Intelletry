@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet-dashboard
+spec:
+  selector:
+    app.kubernetes.io/name: fleet-dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

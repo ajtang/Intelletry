@@ -2,7 +2,7 @@
 
 A connected-vehicle telemetry platform that explains why a vehicle is behaving abnormally, not just what its sensors read.
 
-**Status:** in progress. The backend pipeline, fleet dashboard and 3D digital twin are built. The deployment setup is still to come.
+**Status:** the backend pipeline, fleet dashboard, 3D digital twin and Azure deployment setup are built. The deployment setup has been validated but not yet run against a real Azure subscription.
 
 ## Screenshots
 
@@ -56,3 +56,11 @@ Ingestion sustained 500,000 events/s under 20 ms p99 with no lost events on one 
 ## Dashboard access
 
 The dashboard has no sign-in yet. The operator name on alert actions is typed in by the user and is not verified, so a real deployment needs Microsoft Entra ID or similar in front of it.
+
+## Deploy to Azure
+
+Docker images, Kubernetes manifests, Bicep, Flux and GitHub Actions are set up for AKS. See [the deployment guide](docs/deployment.md) for how they fit together, how to do the first deployment, and the known gaps.
+
+```bash
+scripts/validate-manifests.sh   # build and schema-check every Kubernetes and Flux entry point
+```

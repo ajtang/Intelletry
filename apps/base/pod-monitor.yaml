@@ -1,0 +1,21 @@
+# Tells Azure Monitor managed Prometheus to scrape every pipeline service. The job label is
+# set to the service name, which the alert rules in infrastructure/ rely on.
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: intelletry
+spec:
+  selector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [telemetry-ingestion, anomaly-engine, alert-service, vehicle-simulator]
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          targetLabel: job
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod

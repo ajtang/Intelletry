@@ -1,0 +1,78 @@
+# Builds images from main, pushes them to the dev registry, and points the dev overlay at
+# them. Flux then deploys to the dev cluster. Production changes only through promote.yml.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "internal/**"
+      - "gen/**"
+      - "go.mod"
+      - "go.sum"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  images:
+    name: Publish ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        service: [telemetry-ingestion, anomaly-engine, alert-service, fleet-dashboard, vehicle-simulator]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # Federated credentials: GitHub's OIDC token is exchanged for Azure access, so no
+      # Azure secret is stored in GitHub.
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: az acr login --name "${{ vars.ACR_NAME }}"
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: true
+          provenance: true
+          sbom: true
+          tags: ${{ vars.ACR_NAME }}.azurecr.io/${{ matrix.service }}:sha-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy-dev:
+    name: Point dev at the new images
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Update image tags
+        working-directory: apps/overlays/dev
+        run: |
+          for s in telemetry-ingestion anomaly-engine alert-service fleet-dashboard vehicle-simulator; do
+            kustomize edit set image "$s=\${ACR_LOGIN_SERVER}/$s:sha-${{ github.sha }}"
+          done
+      # This commit only touches apps/, which is outside this workflow's paths, so it
+      # does not trigger another release.
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/overlays/dev/kustomization.yaml
+          git commit -m "Deploy ${GITHUB_SHA::12} to dev"
+          git push

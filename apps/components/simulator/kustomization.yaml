@@ -1,0 +1,6 @@
+# A synthetic fleet for non-production clusters. It sends telemetry through the public
+# gRPC path, so it exercises the same code as real vehicles.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - deployment.yaml

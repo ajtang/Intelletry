@@ -1,0 +1,74 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+components:
+  - ../../components/simulator
+configMapGenerator:
+  - name: pipeline-config
+    behavior: merge
+    literals:
+      # The simulator compresses time, so the engine must interpret rates the same way.
+      - TELEMETRY_TIME_SCALE=60
+      - TRACE_SAMPLE_RATIO=0.25
+patches:
+  # The simulator's ingest key is added to the Key Vault secrets read in dev.
+  - target:
+      kind: SecretProviderClass
+      name: intelletry-keyvault
+    patch: |
+      - op: add
+        path: /spec/parameters/objects
+        value: |
+          array:
+            - |
+              objectName: redis-url
+              objectType: secret
+            - |
+              objectName: database-url
+              objectType: secret
+            - |
+              objectName: api-token
+              objectType: secret
+            - |
+              objectName: ingest-api-keys
+              objectType: secret
+            - |
+              objectName: simulator-ingest-key
+              objectType: secret
+      - op: add
+        path: /spec/secretObjects/0/data/-
+        value:
+          objectName: simulator-ingest-key
+          key: SIMULATOR_INGEST_KEY
+  # Dev runs one replica of each service to save cost; prod keeps the base minimum of 2.
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: "(telemetry-ingestion|anomaly-engine|alert-service|fleet-dashboard)"
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+images:
+  # Tags are set by the release workflow after each build of main.
+  - name: telemetry-ingestion
+    newName: ${ACR_LOGIN_SERVER}/telemetry-ingestion
+    newTag: unreleased
+  - name: anomaly-engine
+    newName: ${ACR_LOGIN_SERVER}/anomaly-engine
+    newTag: unreleased
+  - name: alert-service
+    newName: ${ACR_LOGIN_SERVER}/alert-service
+    newTag: unreleased
+  - name: fleet-dashboard
+    newName: ${ACR_LOGIN_SERVER}/fleet-dashboard
+    newTag: unreleased
+  - name: vehicle-simulator
+    newName: ${ACR_LOGIN_SERVER}/vehicle-simulator
+    newTag: unreleased

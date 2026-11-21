@@ -1,0 +1,44 @@
+# Opens a pull request that gives production the images currently running in dev.
+# Merging it is the production deployment, so it goes through review like any change.
+name: Promote to production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Copy image tags from dev to prod
+        id: copy
+        run: |
+          python3 - <<'EOF'
+          import re
+          dev = open("apps/overlays/dev/kustomization.yaml").read()
+          tags = dict(re.findall(r"- name: ([\w-]+)\n\s+newName: .*\n\s+newTag: (\S+)", dev))
+          path = "apps/overlays/prod/kustomization.yaml"
+          prod = open(path).read()
+          for name, tag in tags.items():
+              prod = re.sub(rf"(- name: {name}\n\s+newName: .*\n\s+newTag: )\S+", rf"\g<1>{tag}", prod)
+          open(path, "w").write(prod)
+          EOF
+          echo "tag=$(grep -m1 -o 'sha-[0-9a-f]*' apps/overlays/prod/kustomization.yaml)" >> "$GITHUB_OUTPUT"
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.copy.outputs.tag }}
+        run: |
+          if git diff --quiet; then echo "Production already matches dev."; exit 0; fi
+          branch="promote/${TAG}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -am "Promote ${TAG} to production"
+          git push -u origin "$branch"
+          gh pr create --title "Promote ${TAG} to production" \
+            --body "Gives production the images running in dev. Merging deploys them through Flux."

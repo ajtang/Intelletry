@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vehicle-simulator
+spec:
+  replicas: 1
+  # Two simulators would send the same vehicles twice.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vehicle-simulator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vehicle-simulator
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: intelletry
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: vehicle-simulator
+          image: vehicle-simulator
+          ports:
+            - name: http
+              containerPort: 8081
+          env:
+            - name: INGEST_GRPC_ADDR
+              value: telemetry-ingestion:9090
+            - name: SIM_VEHICLES
+              value: "1000"
+            - name: SIM_FAULT_RATE
+              value: "0.15"
+            # Must match TELEMETRY_TIME_SCALE in the overlay.
+            - name: SIM_TIME_SCALE
+              value: "60"
+            - name: INGEST_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: intelletry-secrets
+                  key: SIMULATOR_INGEST_KEY
+            # Lets the Go runtime collect garbage before the container hits its limit.
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+                  divisor: "1"
+          # Liveness ignores dependencies, so a Redis outage does not restart every pod.
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: secrets-store
+              mountPath: /mnt/secrets
+              readOnly: true
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: intelletry-keyvault
